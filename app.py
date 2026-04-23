@@ -406,7 +406,7 @@ with tab_reporte:
 
         df_rep = pd.DataFrame(filas)
         st.dataframe(
-            df_rep.style.applymap(
+            df_rep.style.map(
                 lambda v: "background-color:#dcfce7" if "APROBADO" in str(v)
                 else ("background-color:#fee2e2" if "RECHAZADO" in str(v)
                       else ("background-color:#fef9c3" if "REVISAR" in str(v)

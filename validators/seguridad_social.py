@@ -67,14 +67,15 @@ def extraer_datos_ss(archivo_pdf) -> dict:
                     break
 
     # Estrategia 3: el IBC se repite 3 veces (pensión, salud, riesgos)
-    # → el número más frecuente >= 800.000 en el documento ES el IBC
+    # → el número más frecuente >= 800.000 (excluyendo cédula) ES el IBC
     if not ibc_str or limpiar_numero(ibc_str) < 800000:
         from collections import Counter
+        cedula_num = limpiar_numero(datos["cedula"]) if datos["cedula"] else 0
         todos_numeros = re.findall(r'[\$\s]([\d\.]{7,})', texto)
         candidatos = []
         for n in todos_numeros:
             v = limpiar_numero(n)
-            if 800000 <= v <= 50000000:
+            if 800000 <= v <= 50000000 and int(v) != int(cedula_num):
                 candidatos.append(int(v))
         if candidatos:
             conteo = Counter(candidatos)
