@@ -33,46 +33,52 @@ def extraer_datos_ss(archivo_pdf) -> dict:
     datos["nombre"] = nombre.strip()
 
     # ── IBC (Ingreso Base de Cotización) ─────────────────────────────────────
-    # Estrategia 1: buscar en texto con distintos formatos PILA
+    # Estrategia 1: patrones directos en el texto
     ibc_str = buscar_valor(texto, [
-        # Enlace Operativo / SuAporte: "IBC Pensión ... $ 1.800.000"
-        r'IBC\s+Pensi[oó]n\s+IBC\s+Salud[^\d]+([\d\.,]+)',
-        r'IBC\s+Pensi[oó]n\s*[\n\r]+\s*\$?\s*([\d\.,]+)',
-        # SOI / Bancolombia: columna "IBC AFP" seguida de valor
-        r'IBC\s+AFP\s+Cotizaci[oó]n[^\d]+([\d\.,]+)',
-        r'IBC\s+AFP[^\d\n]{0,10}([\d\.,]{5,})',
-        # Compensar: "IBC AFP" en tabla
-        r'IBC\s*AFP\s+([\d\.,]{5,})',
-        # Genérico IBC seguido de número grande
-        r'IBC[^\d\n]{0,5}([\d\.]{7,})',
-        r'Ingreso\s+Base[^\d]+([\d\.,]+)',
-        r'SALARIO[:\s]+\$?\s*([\d\.,]+)',
+        r'IBC\s+pensi[oó]n[^\d$]{0,20}\$?\s*([\d\.]{7,})',
+        r'IBC\s+pensi[oó]n\s*\n\s*\$?\s*([\d\.]{7,})',
+        r'IBC\s+Pensi[oó]n\s+IBC\s+Salud[^\d]+([\d\.]{7,})',
+        r'IBC\s+AFP[^\d]{0,15}([\d\.]{7,})',
+        r'IBC\s+EPS[^\d]{0,15}([\d\.]{7,})',
+        r'IBC\s+salud[^\d]{0,15}([\d\.]{7,})',
+        r'IBC[^\d\n]{0,8}([\d\.]{7,})',
+        r'Salario\s+B[aá]sico[^\d]{0,10}\$?\s*([\d\.]{7,})',
     ])
 
-    # Estrategia 2: buscar en tablas extraídas
-    if not ibc_str or limpiar_numero(ibc_str) == 0:
+    # Estrategia 2: buscar en tablas extraídas (fila con IBC)
+    if not ibc_str or limpiar_numero(ibc_str) < 800000:
         for tabla_info in tablas:
-            datos_tabla = tabla_info["datos"]
-            for i, fila in enumerate(datos_tabla):
+            for i, fila in enumerate(tabla_info["datos"]):
                 fila_str = " ".join([str(c) for c in fila if c])
-                if re.search(r'IBC', fila_str, re.IGNORECASE):
-                    # Buscar en la misma fila o en la siguiente
+                if re.search(r'\bIBC\b', fila_str, re.IGNORECASE):
                     for c in fila:
                         v = limpiar_numero(str(c)) if c else 0
-                        if v >= 800000:  # IBC mínimo Colombia
-                            ibc_str = str(c)
+                        if v >= 800000:
+                            ibc_str = str(int(v))
                             break
-                    if ibc_str:
-                        break
-                    # Buscar en fila siguiente
-                    if i + 1 < len(datos_tabla):
-                        for c in datos_tabla[i + 1]:
-                            v = limpiar_numero(str(c)) if c else 0
-                            if v >= 800000:
-                                ibc_str = str(c)
-                                break
-                if ibc_str:
+                    if not ibc_str or limpiar_numero(ibc_str) < 800000:
+                        if i + 1 < len(tabla_info["datos"]):
+                            for c in tabla_info["datos"][i + 1]:
+                                v = limpiar_numero(str(c)) if c else 0
+                                if v >= 800000:
+                                    ibc_str = str(int(v))
+                                    break
+                if ibc_str and limpiar_numero(ibc_str) >= 800000:
                     break
+
+    # Estrategia 3: el IBC se repite 3 veces (pensión, salud, riesgos)
+    # → el número más frecuente >= 800.000 en el documento ES el IBC
+    if not ibc_str or limpiar_numero(ibc_str) < 800000:
+        from collections import Counter
+        todos_numeros = re.findall(r'[\$\s]([\d\.]{7,})', texto)
+        candidatos = []
+        for n in todos_numeros:
+            v = limpiar_numero(n)
+            if 800000 <= v <= 50000000:
+                candidatos.append(int(v))
+        if candidatos:
+            conteo = Counter(candidatos)
+            ibc_str = str(conteo.most_common(1)[0][0])
 
     datos["ibc"] = limpiar_numero(ibc_str)
 
