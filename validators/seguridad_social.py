@@ -1,6 +1,6 @@
 import re
 import pandas as pd
-from utils.pdf_extractor import extraer_texto, limpiar_numero, buscar_valor
+from utils.pdf_extractor import extraer_texto, extraer_tablas, limpiar_numero, buscar_valor
 
 
 def extraer_datos_ss(archivo_pdf) -> dict:
