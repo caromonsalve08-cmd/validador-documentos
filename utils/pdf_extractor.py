@@ -6,6 +6,8 @@ from datetime import datetime
 def extraer_texto(archivo_pdf) -> str:
     """Extrae todo el texto de un PDF."""
     texto = ""
+    if hasattr(archivo_pdf, 'seek'):
+        archivo_pdf.seek(0)
     with pdfplumber.open(archivo_pdf) as pdf:
         for pagina in pdf.pages:
             t = pagina.extract_text()
@@ -17,6 +19,8 @@ def extraer_texto(archivo_pdf) -> str:
 def extraer_tablas(archivo_pdf) -> list:
     """Extrae todas las tablas de un PDF."""
     tablas = []
+    if hasattr(archivo_pdf, 'seek'):
+        archivo_pdf.seek(0)
     with pdfplumber.open(archivo_pdf) as pdf:
         for i, pagina in enumerate(pdf.pages):
             for tabla in pagina.extract_tables():
