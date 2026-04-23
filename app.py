@@ -115,11 +115,12 @@ if not VALIDADORES_OK:
 # ════════════════════════════════════════════════════════════════════════════
 # TABS PRINCIPALES
 # ════════════════════════════════════════════════════════════════════════════
-tab_ss, tab_nom, tab_fac, tab_reporte = st.tabs([
+tab_ss, tab_nom, tab_fac, tab_reporte, tab_debug = st.tabs([
     "📋 Seguridad Social",
     "💰 Nómina",
     "🧾 Facturas",
     "📊 Reporte General",
+    "🔧 Diagnóstico PDF",
 ])
 
 # Almacenar resultados en session_state
@@ -473,3 +474,24 @@ with tab_reporte:
             st.session_state.resultados_nom = []
             st.session_state.resultados_fac = []
             st.rerun()
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# TAB 5 — DIAGNÓSTICO PDF
+# ════════════════════════════════════════════════════════════════════════════
+with tab_debug:
+    st.subheader("🔧 Diagnóstico — Ver texto extraído del PDF")
+    st.info("Sube una planilla aquí para ver exactamente cómo la lee el sistema. Útil para ajustar la extracción del IBC.")
+    pdf_diag = st.file_uploader("PDF para diagnóstico", type=["pdf"], key="diag_pdf")
+    if pdf_diag:
+        from utils.pdf_extractor import extraer_texto, extraer_tablas
+        texto = extraer_texto(pdf_diag)
+        st.markdown("**Texto extraído:**")
+        st.text_area("Texto completo", texto, height=400)
+        pdf_diag.seek(0)
+        tablas = extraer_tablas(pdf_diag)
+        st.markdown(f"**Tablas encontradas: {len(tablas)}**")
+        for i, t in enumerate(tablas):
+            with st.expander(f"Tabla {i+1} (página {t['pagina']})"):
+                for fila in t["datos"]:
+                    st.write(fila)
